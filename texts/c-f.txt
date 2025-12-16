@@ -1,0 +1,13 @@
+c_to_f(C,F) :-
+F is C * 9 / 5 + 32.
+freezing(F) :-
+F =< 32.
+
+?- c_to_f(100,X).
+X = 212.
+
+?- freezing(50).
+false.
+
+?- freezing(15).
+true.

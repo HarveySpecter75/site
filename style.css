@@ -1,0 +1,54 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+}
+
+/* TOP BACKGROUND IMAGE */
+.hero {
+    height: 100vh;
+    background-image: url("assets/Interface.jpeg");
+    background-size: cover;
+    background-position: center;
+}
+
+/* BUTTON AREA */
+.buttons-section {
+    min-height: 100vh;
+    background-color: #111;
+    display: flex;
+    align-items: center;
+}
+
+/* BUTTON LAYOUT */
+.container {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    padding: 60px;
+}
+
+.column {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+button {
+    padding: 14px 22px;
+    font-size: 16px;
+    cursor: pointer;
+    border: none;
+    border-radius: 6px;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    transition: background 0.2s ease;
+}
+
+button:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+}

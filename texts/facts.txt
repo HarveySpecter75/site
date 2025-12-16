@@ -1,0 +1,17 @@
+likes(ram,mango).
+girl(seema).
+red(rose).
+likes(bill ,cindy).
+owns(john ,gold).
+
+o/p
+
+?- likes(ram, What).
+What = mango.
+
+?- likes(Who, cindy).
+ Who = bill.
+
+?- owns(Who, What).
+Who = john,
+What = gold.

@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Clipboard Button Site</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- BACKGROUND SECTION -->
+    <section class="hero"></section>
+
+    <!-- BUTTON SECTION (VISIBLE AFTER SCROLL) -->
+    <section class="buttons-section">
+        <div class="container">
+            <div class="column left">
+                <button onclick="copyText('texts/facts.txt')">facts</button>
+                <button onclick="copyText('texts/c-f.txt')">c-f</button>
+                <button onclick="copyText('texts/8queen.txt')">8queen</button>
+                <button onclick="copyText('texts/8puzzle.txt')">8puzzle</button>
+                <button onclick="copyText('texts/bfs.txt')">bfs</button>
+                <button onclick="copyText('texts/dfs.txt')">dfs</button>
+            </div>
+
+            <div class="column right">
+                <button onclick="copyText('texts/4queen.txt')">4queen</button>
+                <button onclick="copyText('texts/salesman.txt')">salesman</button>
+                <button onclick="copyText('texts/waterjug.txt')">waterjug</button>
+                <button onclick="copyText('texts/miscan.txt')">mission</button>
+                <button onclick="copyText('texts/library.txt')">library</button>
+                <button onclick="copyText('texts/chatbot.txt')">chatbot</button>
+            </div>
+        </div>
+    </section>
+
+    <script src="script.js"></script>
+</body>
+</html>

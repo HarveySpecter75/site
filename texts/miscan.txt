@@ -1,0 +1,125 @@
+
+% --- Initial and Goal States ---
+start([3,3,left,0,0]).
+goal([0,0,right,3,3]).
+
+% --- Safety Constraint ---
+% A state is legal if missionaries are not outnumbered by cannibals
+% on either side (unless there are 0 missionaries on that side).
+legal(CL, ML, CR, MR) :-
+    ML >= 0, CL >= 0, MR >= 0, CR >= 0,
+    (ML >= CL ; ML = 0),
+    (MR >= CR ; MR = 0).
+
+% --- Possible Moves (Left to Right) ---
+% 1. Two Missionaries cross L->R
+move([CL,ML,left,CR,MR], [CL,ML2,right,CR,MR2]):-
+    MR2 is MR + 2,
+    ML2 is ML - 2,
+    legal(CL, ML2, CR, MR2).
+
+% 2. Two Cannibals cross L->R
+move([CL,ML,left,CR,MR], [CL2,ML,right,CR2,MR]):-
+    CR2 is CR + 2,
+    CL2 is CL - 2,
+    legal(CL2, ML, CR2, MR).
+
+% 3. One Missionary and One Cannibal cross L->R
+move([CL,ML,left,CR,MR], [CL2,ML2,right,CR2,MR2]):-
+    CR2 is CR + 1,
+    CL2 is CL - 1,
+    MR2 is MR + 1,
+    ML2 is ML - 1,
+    legal(CL2, ML2, CR2, MR2).
+
+% 4. One Missionary crosses L->R
+move([CL,ML,left,CR,MR], [CL,ML2,right,CR,MR2]):-
+    MR2 is MR + 1,
+    ML2 is ML - 1,
+    legal(CL, ML2, CR, MR2).
+
+% 5. One Cannibal crosses L->R
+move([CL,ML,left,CR,MR], [CL2,ML,right,CR2,MR]):-
+    CR2 is CR + 1,
+    CL2 is CL - 1,
+    legal(CL2, ML, CR2, MR).
+
+% --- Possible Moves (Right to Left) ---
+% 1. Two Missionaries cross R->L
+move([CL,ML,right,CR,MR], [CL,ML2,left,CR,MR2]):-
+    MR2 is MR - 2,
+    ML2 is ML + 2,
+    legal(CL, ML2, CR, MR2).
+
+% 2. Two Cannibals cross R->L
+move([CL,ML,right,CR,MR], [CL2,ML,left,CR2,MR]):-
+    CR2 is CR - 2,
+    CL2 is CL + 2,
+    legal(CL2, ML, CR2, MR).
+
+% 3. One Missionary and One Cannibal cross R->L
+move([CL,ML,right,CR,MR], [CL2,ML2,left,CR2,MR2]):-
+    CR2 is CR - 1,
+    CL2 is CL + 1,
+    MR2 is MR - 1,
+    ML2 is ML + 1,
+    legal(CL2, ML2, CR2, MR2).
+
+% 4. One Missionary crosses R->L
+move([CL,ML,right,CR,MR], [CL,ML2,left,CR,MR2]):-
+    MR2 is MR - 1,
+    ML2 is ML + 1,
+    legal(CL, ML2, CR, MR2).
+
+% 5. One Cannibal crosses R->L
+move([CL,ML,right,CR,MR], [CL2,ML,left,CR2,MR]):-
+    CR2 is CR - 1,
+    CL2 is CL + 1,
+    legal(CL2, ML, CR2, MR).
+
+
+% --- Recursive Solver ---
+% Path(CurrentState, GoalState, VisitedList, MovesList)
+path(Goal, Goal, _, MovesList):-
+    output(MovesList).
+
+path(State, Goal, Explored, MovesList) :-
+    move(State, NextState),
+    \+ member(NextState, Explored), % Prevent cycles
+    path(NextState, Goal, [NextState|Explored], [ [NextState, State] | MovesList ]).
+
+% --- Output ---
+% Recursively prints the path from start to finish
+output([]) :- nl.
+output([[Next, Curr] | Rest]) :-
+    output(Rest),
+    write(Curr), write(' -> '), write(Next), nl.
+
+% --- Main Predicate ---
+solve :-
+    start(Start),
+    goal(Goal),
+    write('Solution Path:'), nl,
+    % Note: passing empty list [] for MovesList initially is not quite right 
+    % in your original logic because the base case prints. 
+    % We start with an empty accumulator in the 4th argument? 
+    % Actually, your original logic builds the list in the recursive call.
+    % Let's stick to your structure:
+    path(Start, Goal, [Start], _).
+
+
+?- solve.
+Solution Path:
+
+[3,3,left,0,0] -> [1,3,right,2,0]
+[1,3,right,2,0] -> [2,3,left,1,0]
+[2,3,left,1,0] -> [0,3,right,3,0]
+[0,3,right,3,0] -> [1,3,left,2,0]
+[1,3,left,2,0] -> [1,1,right,2,2]
+[1,1,right,2,2] -> [2,2,left,1,1]
+[2,2,left,1,1] -> [2,0,right,1,3]
+[2,0,right,1,3] -> [3,0,left,0,3]
+[3,0,left,0,3] -> [1,0,right,2,3]
+[1,0,right,2,3] -> [1,1,left,2,2]
+[1,1,left,2,2] -> [0,0,right,3,3]
+true

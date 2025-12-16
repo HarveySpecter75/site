@@ -1,0 +1,60 @@
+% --- Graph Definitions ---
+s(a,b).
+s(a,c).
+s(b,d).
+s(b,e).
+s(c,f).
+s(c,g).
+s(d,h).
+s(e,i).
+s(e,j).
+s(f,k).
+
+% --- Goals ---
+goal(f).
+goal(j).
+
+% --- Solver ---
+solve(Start, Solution):-
+    bfs([[Start]], Solution).
+
+% --- BFS Logic ---
+% Base Case: If the head of the path (Node) is the goal, we are done.
+bfs([[Node|Path]|_], [Node|Path]):-
+    goal(Node).
+
+% Recursive Step: Extend path and put new paths at the END of the queue.
+bfs([Path|Paths], Solution):-
+    extend(Path, NewPaths),
+    % Debug output
+    write('NewPaths found: '), write(NewPaths), nl, 
+    conc(Paths, NewPaths, Paths1),
+    bfs(Paths1, Solution).
+
+% --- Helpers ---
+% Find all valid children nodes and create new paths
+extend([Node|Path], NewPaths):-
+    bagof([NewNode, Node|Path],
+          (s(Node, NewNode), \+ member(NewNode, [Node|Path])),
+          NewPaths), !.
+extend(_, []). % If no children or bagof fails, return empty list.
+
+% Concatenate lists (Append)
+conc([], L, L).
+conc([X|L1], L2, [X|L3]):-
+    conc(L1, L2, L3).
+
+
+
+
+
+
+
+
+?- solve(a,S).
+NewPaths found: [[b,a],[c,a]]
+NewPaths found: [[d,b,a],[e,b,a]]
+NewPaths found: [[f,c,a],[g,c,a]]
+NewPaths found: [[h,d,b,a]]
+NewPaths found: [[i,e,b,a],[j,e,b,a]]
+S = [f, c, a] 

@@ -1,0 +1,66 @@
+
+% --- Book Database (Title, Author, Year, TotalCopies) ---
+book('The Hobbit', 'J.R.R Tolkien', 1937, 2).
+book('1984', 'George Orwell', 1949, 3).
+book('To Kill a Mockingbird', 'Harper Lee', 1960, 5).
+book('The Catcher in the Rye', 'J.D. Salinger', 1951, 1).
+book('Pride and Prejudice', 'Jane Austen', 1813, 4).
+book('The Great Gatsby', 'F. Scott Fitzgerald', 1925, 2).
+book('Moby-Dick', 'Herman Melville', 1851, 3).
+book('The Lord of the Rings', 'J.R.R. Tolkien', 1954, 1).
+book('One Hundred Years of Solitude', 'Gabriel Garcia Marquez', 1967, 2).
+book('Brave New World', 'Aldous Huxley', 1932, 1).
+book('Crime and Punishment', 'Fyodor Dostoevsky', 1866, 2).
+book('The Odyssey', 'Homer', -800, 1).
+book('Frankenstein', 'Mary Shelley', 1818, 1).
+
+% --- Student Records ---
+student('Alice').
+student('Bob').
+student('Charlie').
+student('David').
+student('Eva').
+student('Frank').
+student('Grace').
+student('Henry').
+student('Ivy').
+student('Jack').
+
+% --- Borrowing Records (Title, Student, DateBorrowed, DateDue) ---
+taken('The Hobbit', 'Alice', 2023-10-25, 2023-11-10).
+taken('1984', 'Bob', 2023-10-20, 2023-11-05).
+taken('To Kill a Mockingbird', 'Charlie', 2023-10-22, 2023-11-08).
+taken('Pride and Prejudice', 'Eva', 2023-10-21, 2023-11-07).
+taken('The Great Gatsby', 'David', 2023-10-23, 2023-11-09).
+
+% --- Rules / Helpers ---
+
+% 1. Find the Author of a specific Title
+author(Author, Title) :-
+    book(Title, Author, _, _).
+
+% 2. Check Total Stock (ignoring loans)
+in_stock(Title, InStock) :-
+    book(Title, _, _, InStock).
+
+% 3. Check Available Copies (Total - Loaned)
+available(Title, Available) :-
+    book(Title, _, _, Total),
+    findall(Student, taken(Title, Student, _, _), TakenList),
+    length(TakenList, TakenCount),
+    Available is Total - TakenCount.
+
+
+?- taken('1984',Student,TakenDate,ReturnDate).
+Student = 'Bob',
+TakenDate = 2023-10-20,
+ReturnDate = 2023-11-5.
+
+?- author(Author,'The Hobbit').
+Author = 'J.R.R Tolkien'.
+
+?- available('The Hobbit',Available).
+Available = 1.
+
+?- in_stock('To Kill a Mockingbird',InStock).
+InStock = 5.
