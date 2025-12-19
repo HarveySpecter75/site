@@ -1,0 +1,72 @@
+ear; clc; close all;
+
+%% eNodeB Configuration
+enb.NDLRB = 15;
+enb.CellRefP = 1;
+enb.NCellID = 10;
+enb.CyclicPrefix = 'Normal';
+enb.DuplexMode = 'FDD';
+enb.NSubframe = 0;
+
+%% Channel Configuration
+chcfg.DelayProfile = 'EVA';
+chcfg.DopplerFreq = 120;
+chcfg.NRxAnts = 1;
+chcfg.Seed = 1;
+chcfg.NormalizePathGains = 'On';
+chcfg.NormalizeTxAnts = 'On';
+
+SNRdB = 22;
+
+%% Generate LTE Grid
+txGrid = lteDLResourceGrid(enb);
+
+% Generate reference and sync signals
+cellRsInd = lteCellRSIndices(enb);
+cellRsSym = lteCellRS(enb);
+
+pssInd = ltePSSIndices(enb);
+pssSym = ltePSS(enb);
+
+sssInd = lteSSSIndices(enb);
+sssSym = lteSSS(enb);
+
+% Insert signals
+txGrid(cellRsInd) = cellRsSym;
+txGrid(pssInd) = pssSym;
+txGrid(sssInd) = sssSym;
+
+%% OFDM Modulation
+[txWaveform, info] = lteOFDMModulate(enb, txGrid);
+
+chcfg.SamplingRate = info.SamplingRate;
+
+%% Fading Channel
+[rxWaveform, pathGains] = lteFadingChannel(chcfg, txWaveform);
+
+%% Add AWGN
+rxWaveform = awgn(rxWaveform, SNRdB, 'measured');
+
+%% Time Synchronization using PSS
+offset = lteDLFrameOffset(enb, rxWaveform);
+rxWaveformSync = rxWaveform(1+offset:end,:);
+
+%% OFDM Demodulation
+rxGrid = lteOFDMDemodulate(enb, rxWaveformSync);
+
+%% Channel Estimation (CRS-based)
+[Hest, noiseEst] = lteDLChannelEstimate(enb, rxGrid);
+
+%% Equalization (ZF)
+rxGridEq = rxGrid ./ Hest;
+
+%% Visualization
+figure;
+plot(20*log10(abs(Hest(:))));
+title('Estimated Channel Magnitude');
+xlabel('Resource Elements');
+ylabel('Magnitude (dB)');
+grid on;
+
+disp('LTE Synchronization, Channel Estimation, and Equalization completed.');
+

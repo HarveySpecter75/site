@@ -1,0 +1,198 @@
+mobile....
+
+
+%% OFDM QPSK - toolbox-free corrected script
+clear; close all; clc;
+
+% Parameters
+M = 4; % QPSK
+no_of_data_points = 64;
+block_size = 8;
+cp_len = ceil(0.1*block_size); % cyclic prefix length
+no_of_ifft_points = block_size;
+no_of_fft_points = block_size;
+
+% 1. Generate data (integers 0..M-1)
+data_source = randi([0 M-1], 1, no_of_data_points);
+figure(1);
+stem(data_source); grid on; xlabel('Data Points'); ylabel('Amplitude');
+title('Transmitted Data "O"');
+
+% ---------- Toolbox-free QPSK modulator (Gray mapping) ----------
+% Using mapping: 0->(1+1j)/sqrt(2), 1->(-1+1j)/sqrt(2), 2->(-1-1j)/sqrt(2), 3->(1-1j)/sqrt(2)
+qpskMap = [(1+1j), (-1+1j), (-1-1j), (1-1j)]/sqrt(2);
+qpsk_modulated_data = qpskMap(data_source+1); % +1 for MATLAB indexing
+
+% Simple scatter (toolbox-free)
+figure(2);
+plot(real(qpsk_modulated_data), imag(qpsk_modulated_data), 'o');
+axis equal; grid on; title('MODULATED TRANSMITTED DATA'); xlabel('I'); ylabel('Q');
+
+% 3. Do IFFT on each block (reshape into columns)
+num_cols = length(qpsk_modulated_data)/block_size;
+if mod(length(qpsk_modulated_data), block_size) ~= 0
+    error('Data length must be a multiple of block_size');
+end
+data_matrix = reshape(qpsk_modulated_data, block_size, num_cols);
+
+cp_start = block_size - cp_len + 1; % start index for CP (MATLAB indexing)
+ifft_data = zeros(block_size + cp_len, num_cols);
+
+for i = 1:num_cols
+    ifft_block = ifft(data_matrix(:,i), no_of_ifft_points);
+    actual_cp = ifft_block(cp_start:end);          % last cp_len samples
+    ifft_data(:,i) = [actual_cp; ifft_block];
+end
+
+% 4. Convert to serial
+[rows_ifft_data, cols_ifft_data] = size(ifft_data);
+len_ofdm_data = rows_ifft_data * cols_ifft_data;
+ofdm_signal = reshape(ifft_data, 1, len_ofdm_data);
+
+figure(3);
+plot(real(ofdm_signal)); xlabel('Time'); ylabel('Amplitude');
+title('OFDM Signal'); grid on;
+
+% ---------------- HPA (simple magnitude-based noise injection) ----------------
+noise = (randn(1,len_ofdm_data) + 1j*randn(1,len_ofdm_data)) / sqrt(2); % complex noise
+avg = 0.4; % threshold on magnitude
+
+% Inject noise when magnitude exceeds threshold
+mask = abs(ofdm_signal) > avg;
+ofdm_signal(mask) = ofdm_signal(mask) + noise(mask);
+
+figure(4);
+plot(real(ofdm_signal)); xlabel('Time'); ylabel('Amplitude');
+title('OFDM Signal after HPA'); grid on;
+
+% ---------------- Channel (FIR) ----------------
+% Example channel: random complex taps (length = block_size)
+channel = (randn(1,block_size) + 1j*randn(1,block_size)) / sqrt(2);
+
+% Pass through channel (FIR filter)
+after_channel = filter(channel, 1, ofdm_signal);
+
+% ---------------- AWGN addition (toolbox-free) ----------------
+% Set target SNR (dB)
+SNRdB = 20; % change as desired
+signalPower = mean(abs(after_channel).^2);
+noisePower = signalPower / (10^(SNRdB/10));
+wn = sqrt(noisePower/2) * (randn(size(after_channel)) + 1j*randn(size(after_channel)));
+recvd_signal = after_channel + wn;
+
+% ---------------- Receiver processing ----------------
+% Reshape back into blocks (rows_ifft_data x cols_ifft_data)
+recvd_signal_matrix = reshape(recvd_signal, rows_ifft_data, cols_ifft_data);
+
+% Remove cyclic prefix (first cp_len rows)
+recvd_signal_matrix(1:cp_len, :) = [];
+
+% Perform FFT per column
+fft_data_matrix = zeros(block_size, cols_ifft_data);
+for i = 1:cols_ifft_data
+    fft_data_matrix(:,i) = fft(recvd_signal_matrix(:,i), no_of_fft_points);
+end
+
+% Convert to serial
+recvd_serial_data = reshape(fft_data_matrix, 1, block_size * num_cols);
+
+% Scatter of received symbols
+figure(5);
+plot(real(recvd_serial_data), imag(recvd_serial_data), '.');
+axis equal; grid on; title('MODULATED RECEIVED DATA'); xlabel('I'); ylabel('Q');
+
+% 8. Demodulate (minimum Euclidean distance to map points)
+% Build decision by distance to constellation points
+rxSymbols = recvd_serial_data;
+demodIndices = zeros(1, length(rxSymbols));
+constPoints = qpskMap; % 1x4
+
+for k = 1:length(rxSymbols)
+    d = abs(rxSymbols(k) - constPoints);
+    [~, idxmin] = min(d);
+    demodIndices(k) = idxmin - 1; % map back to 0..M-1
+end
+
+qpsk_demodulated_data = demodIndices; % integer symbols 0..M-1
+
+figure(6);
+stem(qpsk_demodulated_data, 'rx'); grid on;
+xlabel('Data Points'); ylabel('Amplitude'); title('Received Data "X"');
+
+
+
+
+desktop....
+
+%% OFDM BASEBAND TRANSMISSION AND RECEPTION (QPSK)
+clear; close all; clc;
+
+%% Parameters
+M = 4;                       % QPSK
+Ndata = 64;
+Nfft = 8;
+cp_len = ceil(0.1*Nfft);
+SNRdB = 20;
+
+%% Data generation
+data = randi([0 M-1], 1, Ndata);
+
+%% QPSK modulation (Gray)
+qpskMap = [(1+1j), (-1+1j), (-1-1j), (1-1j)]/sqrt(2);
+txSym = qpskMap(data+1);
+
+%% Serial to parallel
+numBlocks = length(txSym)/Nfft;
+txSymMat = reshape(txSym, Nfft, numBlocks);
+
+%% IFFT + CP
+txOFDM = [];
+for k = 1:numBlocks
+    ifftOut = ifft(txSymMat(:,k), Nfft);
+    cp = ifftOut(end-cp_len+1:end);
+    txOFDM = [txOFDM; cp; ifftOut]; %#ok<AGROW>
+end
+
+%% Channel (multipath)
+h = (randn(1,Nfft) + 1j*randn(1,Nfft))/sqrt(2);
+rxChan = filter(h, 1, txOFDM);
+
+%% AWGN
+sigPwr = mean(abs(rxChan).^2);
+noisePwr = sigPwr / 10^(SNRdB/10);
+noise = sqrt(noisePwr/2)*(randn(size(rxChan))+1j*randn(size(rxChan)));
+rxSignal = rxChan + noise;
+
+%% Receiver: CP removal + FFT
+rxMat = reshape(rxSignal, Nfft+cp_len, numBlocks);
+rxMat(1:cp_len,:) = [];
+
+rxFFT = zeros(Nfft, numBlocks);
+for k = 1:numBlocks
+    rxFFT(:,k) = fft(rxMat(:,k), Nfft);
+end
+
+%% Frequency-domain channel equalization
+H = fft(h, Nfft).';
+rxEq = rxFFT ./ H;
+
+%% Parallel to serial
+rxSerial = reshape(rxEq, 1, []);
+
+%% Demodulation (minimum distance)
+rxData = zeros(1,length(rxSerial));
+for k = 1:length(rxSerial)
+    [~, idx] = min(abs(rxSerial(k)-qpskMap));
+    rxData(k) = idx-1;
+end
+
+%% Plots
+figure; stem(data); title('Transmitted Data'); grid on;
+figure; plot(real(txSym),imag(txSym),'o'); axis equal; title('TX Constellation'); grid on;
+figure; plot(real(rxSerial),imag(rxSerial),'.'); axis equal; title('RX Constellation (Equalized)'); grid on;
+figure; stem(rxData,'r'); title('Received Data'); grid on;
+
+
+
+
+

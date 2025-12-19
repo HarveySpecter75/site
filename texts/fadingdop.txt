@@ -1,0 +1,147 @@
+ear; clc; close all;
+
+sampleRate = 500e3;
+M = 4;                     % QPSK
+bitsPerFrame = 1000;
+
+
+% Map 2 bits → 1 symbol (Gray code)
+% 00 →  1 + j
+% 01 → -1 + j
+% 11 → -1 - j
+% 10 →  1 - j
+
+qpskMap = [ ...
+    1+1j;   % 00
+   -1+1j;   % 01
+   -1-1j;   % 11
+    1-1j];  % 10
+
+% Normalize to unit power
+qpskMap = qpskMap / sqrt(2);
+
+
+
+msg = randi([0 1], bitsPerFrame, 1);
+
+% Group bits into pairs
+bitPairs = reshape(msg, 2, []).';
+
+% Convert pairs → decimal index
+idx = bitPairs(:,1)*2 + bitPairs(:,2) + 1;
+
+% QPSK modulation
+modSignal = qpskMap(idx);
+
+
+
+% Rayleigh fading = complex Gaussian with variance 1
+rayleighFading = (randn(size(modSignal)) + 1j*randn(size(modSignal))) / sqrt(2);
+
+% Apply fading
+rxSignal = modSignal .* rayleighFading;
+
+
+figure;
+subplot(2,1,1)
+plot(real(modSignal), imag(modSignal), 'o');
+title('Transmitted QPSK Constellation');
+xlabel('In-Phase'); ylabel('Quadrature'); grid on;
+
+subplot(2,1,2)
+plot(real(rxSignal), imag(rxSignal), 'o');
+title('After Rayleigh Fading');
+xlabel('In-Phase'); ylabel('Quadrature'); grid on;
+
+
+
+figure;
+plot(20*log10(abs(rayleighFading)));
+grid on; title('Rayleigh Fading Gain (dB)');
+xlabel('Symbol Index'); ylabel('Gain (dB)');
+
+
+matti ...
+
+
+clear; clc; close all;
+
+%% ------------------ System Parameters ------------------
+sampleRate = 500e3;      % Sample rate (Hz)
+M = 4;                   % QPSK
+bitsPerFrame = 1000;
+fc = 2e9;                % Carrier frequency (2 GHz)
+v_kmh = 60;               % Mobile speed (km/h)
+c = 3e8;                 % Speed of light
+
+Ts = 1/sampleRate;       % Sample time
+v = v_kmh * 1000/3600;   % m/s
+fd = (v/c) * fc;         % Maximum Doppler shift (Hz)
+
+fprintf('Maximum Doppler Shift = %.2f Hz\n', fd);
+
+%% ------------------ QPSK Modulation ------------------
+qpskMap = [ ...
+    1+1j;    % 00
+   -1+1j;    % 01
+   -1-1j;    % 11
+    1-1j ];  % 10
+
+qpskMap = qpskMap / sqrt(2);
+
+msg = randi([0 1], bitsPerFrame, 1);
+bitPairs = reshape(msg, 2, []).';
+idx = bitPairs(:,1)*2 + bitPairs(:,2) + 1;
+txSignal = qpskMap(idx);
+
+N = length(txSignal);
+
+%% ------------------ Rayleigh Fading with Doppler ------------------
+% Time-correlated Rayleigh fading using J0 Bessel function
+
+alpha = besselj(0, 2*pi*fd*Ts);  % Doppler correlation factor
+
+h = zeros(N,1);
+h(1) = (randn + 1j*randn)/sqrt(2);
+
+for n = 2:N
+    w = (randn + 1j*randn)/sqrt(2);
+    h(n) = alpha*h(n-1) + sqrt(1-alpha^2)*w;
+end
+
+%% ------------------ Channel + Noise ------------------
+rxSignal = txSignal .* h;
+
+snr = 20; % dB
+rxSignal = awgn(rxSignal, snr, 'measured');
+
+%% ------------------ Plots ------------------
+figure;
+subplot(1,2,1)
+plot(real(txSignal), imag(txSignal), 'o');
+title('Transmitted QPSK');
+xlabel('In-Phase'); ylabel('Quadrature');
+grid on; axis square;
+
+subplot(1,2,2)
+plot(real(rxSignal), imag(rxSignal), 'o');
+title('Received QPSK (Rayleigh + Doppler)');
+xlabel('In-Phase'); ylabel('Quadrature');
+grid on; axis square;
+
+figure;
+plot(20*log10(abs(h)));
+title('Rayleigh Fading Envelope with Doppler');
+xlabel('Symbol Index');
+ylabel('Gain (dB)');
+grid on;
+
+figure;
+plot(real(h)); hold on;
+plot(imag(h));
+legend('In-Phase','Quadrature');
+title('Time-Correlated Rayleigh Fading');
+grid on;
+
+
+

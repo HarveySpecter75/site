@@ -11,7 +11,7 @@ body {
 /* TOP BACKGROUND IMAGE */
 .hero {
     height: 100vh;
-    background-image: url("assets/Interface.jpeg");
+    background-image: url("assets/Pic.jpg");
     background-size: cover;
     background-position: center;
 }

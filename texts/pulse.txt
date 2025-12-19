@@ -1,0 +1,75 @@
+pulse ...
+
+
+
+  fs = 1e6;  % Sampling frequency (Hz)   
+fc = 2.4e9;  % Carrier frequency (Hz)   
+v = 30;  % Mobile speed (m/s)   
+d = 100;  % Distance between transmitter and receiver (m)   
+N = 1000;  % Number of samples   
+% Generate random data   
+data = randi([0 1], N, 1);   
+% Modulate data using QPSK   
+mod_data = qpsk_mod(data, fc, fs);   
+% Add fading effects using Rayleigh fading channel   
+h = rayleigh_chan(fc, fs, v, d, N);   
+faded_data = mod_data .* h;   
+% Add Doppler effects using Doppler shift   
+fd = doppler_shift(fc, v, d);   
+doppler_data = faded_data .* exp(1j * 2 * pi * fd * (0:N-1)'/fs);   
+% Add noise   
+noise = randn(N, 1) + 1j * randn(N, 1);   
+received_data = doppler_data + noise;   
+% Demodulate received data using QPSK   
+demod_data = qpsk_demod(received_data, fc, fs);   
+% Plot results   
+figure;   
+subplot(2, 1, 1);   
+plot(abs(mod_data));   
+title('Transmitted Signal');   
+xlabel('Time (s)');   
+ylabel('Amplitude');   
+subplot(2, 1, 2);   
+plot(abs(received_data));   
+title('Received Signal');   
+xlabel('Time (s)');   
+ylabel('Amplitude');   
+% Functions   
+function mod_data = qpsk_mod(data, fc, fs)   
+% QPSK modulation   
+mod_data = zeros(size(data));   
+for i = 1:length(data) 
+if data(i) == 0   
+mod_data(i) = exp(1j * pi/4);   
+else   
+mod_data(i) = exp(1j * 3*pi/4);   
+end   
+end   
+mod_data = mod_data .* exp(1j * 2 * pi * fc * (0:length(data)-1)'/fs);   
+end   
+   
+function demod_data = qpsk_demod(data, fc, fs)   
+   % QPSK demodulation   
+   demod_data = zeros(size(data));   
+   for i = 1:length(data)   
+      if angle(data(i)) < pi/4   
+        demod_data(i) = 0;   
+      else   
+        demod_data(i) = 1;   
+      end   
+   end   
+end   
+   
+function h = rayleigh_chan(fc, fs, v, d, N)   
+   % Rayleigh fading channel   
+   h = zeros(N, 1);   
+   for i = 1:N   
+      h(i) = sqrt(1/2) * (randn + 1j * randn);   
+   end   
+   h = h .* exp(-1j * 2 * pi * fc * d / (3e8));   
+end   
+   
+function fd = doppler_shift(fc, v, d)   
+   % Doppler shift   
+   fd = v * fc / (3e8);   
+end
